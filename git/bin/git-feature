@@ -56,6 +56,7 @@ if [[ "$1" == "restart" ]]; then
 
     git config feature.active "$(git shortname)/$2"
     git checkout $(git config feature.active)
+    exit
 fi
 
 if [[ "$1" == "switch" ]]; then
