@@ -1,0 +1,10 @@
+#!/bin/bash
+
+ORIGIN=$(git remote get-url origin)
+if [[ $? != 0 ]]; then
+    echo "No 'origin' remote set. Sorry, can't help"
+    exit 1
+fi
+URL=$(git remote get-url origin | sed -s 's/git@//g' | sed -s 's/:/\//g')
+xopen "https://$URL"
+

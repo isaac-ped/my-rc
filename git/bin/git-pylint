@@ -1,0 +1,51 @@
+#!/bin/bash
+###
+# Runs flake8 and mypy on staged python files in the repo
+###
+
+anyerr=0
+
+tmpdir=/tmp/gittmp/$(basename $(git base-dir))
+mkdir -p $tmpdir
+
+# Copy the repo to tmpdir so we can sub in working files
+# (there has got to be a better way)
+git ls-files > $tmpdir/files
+
+rsync --delete -a * --include='*/' --include-from=$tmpdir/files --exclude='*' --prune-empty-dirs $tmpdir > /dev/null
+
+for modified in $(git diff --staged --name-only '*.py'); do
+    tmpfile=$tmpdir/$modified
+    git show :$modified > $tmpfile
+done
+
+errfiles=""
+for toflake in $(git diff --staged --name-only '*.py'); do
+    baseno=$(dirname $toflake)/.$(basename $toflake)
+    tmpfile=$tmpdir/$toflake
+
+    if [[ ! -e ${baseno}.noflake ]]; then
+        pushd $tmpdir > /dev/null
+        if ! flake8 $toflake --show-source --max-line-length=88; then
+            errfiles+="$toflake (flake8) "
+        fi
+        popd > /dev/null
+    fi
+
+    if [[ ! -e ${baseno}.nomypy ]]; then
+        pushd $tmpdir > /dev/null
+        echo -n "$toflake: "
+        if ! mypy --ignore-missing-imports $toflake; then
+            errfiles+="$toflake (mypy) "
+        fi
+        popd > /dev/null
+    fi
+done
+
+if [[ $errfiles != "" ]]; then
+    echo "Errors encountered..."
+    echo $errfiles
+    sleep 5
+fi
+
+exit 0

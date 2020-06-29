@@ -1,0 +1,49 @@
+[setup]
+    dir = $HOME/.config/my-rc/git/
+[branches]
+    main = master
+[alias]
+    shortname=config user.shortname
+    lg1 = log --graph --decorate \
+        --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)'
+    lg2 = log --graph --decorate \
+        --format='%C(bold red)%h%C(reset) - %C(yellow)%an [%C(reset)%C(bold green)%ar%C(reset)] %C(bold yellow)%d%C(reset)%n%C(bold white)%f%C(reset)%n%b'
+    lgm = !git lg1 --since=\"$(git show -s --format=%ci $(git config branches.main))\"
+    graph = log --graph --all
+    lg0 = log --graph --decorate --oneline  --simplify-by-decoration
+    difc = "!f() { git diff $1~ $1; }; f"
+    saveall = "!f() { if [ $# -ne 2 ]; then echo 'Usage: git saveall <label> \"message\" '; return; fi; git -c filters.python.clean=cat add -A :/ && git commit --no-verify -m \"$2\" && git branch $(git shortname)/saved/$1 && git reset HEAD^; }; f"
+    save = "!f() { if [ $# -ne 2 ]; then echo 'Usage: git save <label> \"message\" '; return; fi; git -c filters.python.clean=cat add -u :/ && git commit --no-verify -m \"$2\" && git branch $(git shortname)/saved/$1 && git reset HEAD^; }; f"
+    mdiff = diff --ext-diff='git-nbdiffdriver'
+    url = !git remote -v | head -1 | cut -f 2 | cut -d ' ' -f 1 && :
+    remote-add-default = !git remote add dev ssh://$DEFAULT_HOST/~/$(realpath --relative-to ~ $(git rev-parse --show-toplevel) )
+    ls = ls-tree --name-only HEAD
+    pcom = !git pull --ff-only && git commit
+    wdiff = diff --color-words='(\"[^\"]+\")|([^ ,]+)|.'
+    base-dir = rev-parse --show-toplevel
+    feat = feature
+    xopen = "!f() { xdg-open https://$(git remote get-url origin | sed 's/.*@//g' | sed 's|\\.git||g' | sed 's|:|/|g')/-/tree/master/$GIT_PREFIX 1>&2 2> /dev/null; }; f"
+[push]
+    default = simple
+[pull]
+    default = simple
+[core]
+    pager = less -XRF
+[diff "jupyternotebook"]
+	command = git-nbdiffdriver diff --ignore-metadata --ignore-details --ignore-output
+[merge "jupyternotebook"]
+	driver = git-nbmergedriver merge %O %A %B %L %P
+	name = jupyter notebook merge driver
+[difftool "nbdime"]
+	cmd = git-nbdifftool diff \"$LOCAL\" \"$REMOTE\" \"$BASE\"
+[difftool]
+    prompt = true
+[mergetool "nbdime"]
+	cmd = git-nbmergetool merge \"$BASE\" \"$LOCAL\" \"$REMOTE\" \"$MERGED\"
+[mergetool]
+    prompt = true
+	tool = vimdiff
+[merge]
+	tool = vimdiff
+[diff]
+	wsErrorHighlight = all

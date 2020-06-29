@@ -1,0 +1,71 @@
+#!/bin/bash
+if [[ $# != 1 && ! ( $# == 2 && $2 == '--continue' ) ]]; then
+    echo "usage: $0 feature_tip_branch --continue"
+    exit 1;
+fi
+
+get_id() {
+    git log $@ --format='%H %D'
+}
+
+id_hash() {
+    echo $@ | cut -d' ' -f1
+}
+id_branches() {
+    BRANCH=$(echo $@ | cut -d' ' -f2-)
+    if [[ ! ( "$BRANCH" =~ [a-z0-9]{40} ) ]]; then
+        echo $BRANCH;
+    fi
+}
+
+set -eu
+MAIN="$1"
+STASHNAME="${1}_rebase_stash"
+
+if [[ $# == 2 ]]; then
+    ID=$(get_id -1 HEAD)
+    if [[ $ID != *"${MAIN}_rebase"* ]]; then
+        echo "can't continue. Not in progress! ($ID != ${MAIN}_rebase)"
+        exit 1
+    fi
+    CURRENT_MSG="$(git log -1 --format='%s')"
+    ID="$(git log --grep="$CURRENT_MSG" --format='%H %D' $MAIN)"
+    COMMON="$(id_hash $ID)"
+    BRANCHES="$(id_branches $ID)"
+    for BRANCH in $BRANCHES; do
+        git branch -f $BRANCH HEAD
+    done
+else
+    EXISTING_STASHNUM=$(git stash list | grep $STASHNAME | cut -d':' -f1)
+    if [[ $EXISTING_STASHNUM != "" ]]; then
+        echo "Stash with $STASHNAME already exists. Please remove before continuing"
+    fi
+    if [[ "$(git status -uno -z)" != "" ]]; then
+        git stash save "$STASHNAME"
+    fi
+    COMMON=$(git merge-base HEAD $MAIN)
+    git checkout -f -b ${MAIN}_rebase
+fi
+
+git log $COMMON..$MAIN --format='%H %D' | tac | while read ID; do
+    HASH=$(echo $ID | cut -d' ' -f1)
+    BRANCHES=$(id_branches $ID)
+
+    HASH_MSG="$(git log -1 --format='%s' $HASH)"
+    if [[ $(git log --grep="$HASH_MSG") == "" ]]; then
+        git cherry-pick $HASH
+    fi
+    for BRANCH in $BRANCHES; do
+        # Strip trailing commas from branch
+        BRANCH=$(sed 's/,\+$//g' <<< "$BRANCH")
+        git branch -f $BRANCH HEAD
+    done
+done
+
+git checkout $MAIN
+git branch -d "${MAIN}_rebase"
+
+STASHNUM=$(git stash list | grep $STASHNAME | cut -d':' -f1)
+if [[ $STASHNUM != "" ]]; then
+    git stash pop $STASHNUM
+fi

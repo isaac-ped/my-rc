@@ -1,0 +1,9 @@
+#!/bin/bash
+
+CURR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+CURR_FEATURE=$(git feature get)
+
+if [[ "$CURR_BRANCH" != $CURR_FEATURE/* ]]; then
+    echo "You can only commit on feature branches!"
+    exit 1;
+fi

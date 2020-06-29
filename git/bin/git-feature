@@ -1,0 +1,151 @@
+#!/bin/bash
+
+set -e
+
+SCRIPT="$(basename $0)"
+
+usage() {
+    echo -e "usage: $SCRIPT $USAGE"
+}
+
+check-usage() {
+    if ! eval "[[ $@ ]]"; then
+        usage
+        exit 1
+    fi
+}
+
+get-feature() {
+    FEATURE=$(git config feature.active)
+    if [[ $FEATURE == "" ]]; then
+        usage
+        exit 1
+    fi
+    echo "$(git config feature.active)-dev"
+}
+
+USAGE="SUB_CMD\n( where SUB_CMD is one of: start, get, go, new, ls, lg, rm, replay, finish) "
+check-usage "$# -ge 1 "
+
+if [[ "$1" == "start" ]]; then
+    USAGE="start <feature-name>"
+    check-usage "$# = 2"
+
+    CURR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    if [[ $CURR_BRANCH != $(git config branches.main) ]]; then
+        echo "WARNING: Not on main branch $(git config branches.main)!"
+        echo "This might not be what you want to do..."
+        sleep 2
+        echo "continuing..."
+        sleep 1
+    fi
+
+    git config feature.active "$(git shortname)/$2"
+    echo "Working feature is now: $(git config feature.active)"
+    BRANCH="$(get-feature)/start"
+    git branch $BRANCH 2> /dev/null & echo "Made start branch $BRANCH"
+    git feature go start
+    BRANCH=$(git config feature.active)
+    git branch $BRANCH 2> /dev/null & echo "Made end branch $BRANCH"
+    exit
+fi
+
+if [[ "$1" == "switch" ]]; then
+    USAGE="switch <sub-feature-name>"
+    check-usage "$# = 2"
+    git config feature.active "$(git shortname)/$2"
+    echo "Working feature is now: $(git config feature.active)"
+    git feature ls
+    exit
+fi
+
+if [[ "$1" == "get" ]]; then
+    USAGE="get"
+    check-usage "$# = 1"
+    get-feature
+    exit
+fi
+
+if [[ "$1" == "go" ]]; then
+    USAGE="go <sub-feature-name>"
+    check-usage "$# = 2"
+    BRANCH="$(get-feature)/$2"
+    echo "Switching to sub-feature $BRANCH"
+    git checkout $BRANCH
+    exit
+fi
+
+if [[ "$1" == "new" ]]; then
+    USAGE="new <sub-feature-name>"
+    check-usage "$# = 2"
+    BRANCH="$(get-feature)/$2"
+    echo "Adding new sub-feature $BRANCH"
+    git checkout -b "$BRANCH"
+    exit
+fi
+
+
+if [[ "$1" == "rm" ]]; then
+    USAGE="rm <sub-feature-name>"
+    check-usage "$# = 2"
+    BRANCH="$(get-feature)/$2"
+    echo "Removing sub-feature $BRANCH"
+    git branch -d "$BRANCH"
+    exit
+fi
+
+if [[ "$1" == "ls" ]]; then
+    USAGE="ls"
+    check-usage "$# = 1"
+    git branch --list "$(git config feature.active)*"
+    exit
+fi
+
+if [[ "$1" == "lg" ]]; then
+    USAGE="lg"
+    check-usage "$# = 1"
+    BRANCHES=$(git feature ls | sed 's/\*//g')
+    echo $BRANCHES
+    BASE=$(echo $BRANCHES | xargs git merge-base --octopus )
+    echo "$BASE"
+    BASEDATE=$(git show -s --format='%ci' $BASE)
+    echo "$BASEDATE"
+    git lg1 $BRANCHES --since="$BASEDATE"
+    exit
+fi
+
+if [[ "$1" == "replay" ]]; then
+    USAGE="replay <sub-feature-name> [ --continue ] "
+    check-usage " ( $# = 2 ) || ( $# = 3 ) "
+    BRANCH="$(get-feature)/$2"
+    echo "Replaying sub-feature $BRANCH"
+    git replay $BRANCH $3
+    exit
+fi
+
+if [[ "$1" == "finish" ]]; then
+    USAGE="finish [best-sub-feature]"
+    check-usage "$# = 1 || $# = 2"
+    if [[ $# = 1 ]]; then
+        TIP="$(git rev-parse --abbrev-ref HEAD)"
+    else
+        TIP="$(get-feature)/$2"
+    fi
+    MAIN=$(git config feature.active)
+    git checkout $MAIN
+    git merge --ff-only $TIP
+    exit
+fi
+
+if [[ "$1" == "merge-into" ]]; then
+    USAGE="merge-into <non-feature-branch>"
+    check-usage "$# = 2"
+    MAIN=$(git config feature.active)
+    NON_FEATURE="$2"
+    git checkout $NON_FEATURE
+    git merge --no-ff $MAIN
+    exit
+fi
+
+
+check-usage "1 = 0"

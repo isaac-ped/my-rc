@@ -1,0 +1,7 @@
+*~
+.*.noisort*
+.*.noblack*
+.*.noflake*
+.*.okflake*
+.*.okmypy*
+trash/

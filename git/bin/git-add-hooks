@@ -1,0 +1,33 @@
+#!/bin/bash
+
+HOOKDIR=$(realpath $(dirname $0)/../hooks/)
+
+REPO_HOOKDIR=$(git base-dir)/.git/hooks/
+
+for HOOKFILE in $HOOKDIR/*/*; do
+    HOOKTYPE=$(basename $(dirname $HOOKFILE))
+    HOOKNAME=$(basename $HOOKFILE)
+    if [[ $HOOKNAME == *~ ]]; then
+        continue;
+    fi
+    if grep $HOOKNAME $REPO_HOOKDIR/$HOOKTYPE 2>/dev/null; then
+        echo "$HOOKNAME already installed"
+        continue;
+    fi
+
+    YN=$(confirm "Install $HOOKTYPE hook $HOOKNAME into $REPO_HOOKDIR/$HOOKTYPE?" y)
+    if [[ $YN == "y" ]]; then
+        echo "Installing $HOOKNAME in $REPO_HOOKDIR/$HOOKTYPE";
+        echo "$(realpath $HOOKFILE)" >> $REPO_HOOKDIR/$HOOKTYPE
+    fi
+done
+
+ATTRS_LINE='*.py filter=python'
+ATTRS_FILE="$(git base-dir)/.gitattributes"
+
+if ! grep "$ATRS_LINE" $ATTRS_FILE > /dev/null ; then
+    echo "$ATTRS_FILE" >> $ATTRS_FILE
+else
+    echo "$ATTRS_LINE" already in "$ATTRS_FILE"
+fi
+exit
