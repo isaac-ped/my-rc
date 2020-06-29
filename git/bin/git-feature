@@ -24,7 +24,7 @@ get-feature() {
     echo "$(git config feature.active)-dev"
 }
 
-USAGE="SUB_CMD\n( where SUB_CMD is one of: start, get, go, new, ls, lg, rm, replay, finish) "
+USAGE="SUB_CMD\n( where SUB_CMD is one of: start, restart, get, go, new, ls, lg, rm, replay, finish) "
 check-usage "$# -ge 1 "
 
 if [[ "$1" == "start" ]]; then
@@ -48,6 +48,14 @@ if [[ "$1" == "start" ]]; then
     BRANCH=$(git config feature.active)
     git branch $BRANCH 2> /dev/null & echo "Made end branch $BRANCH"
     exit
+fi
+
+if [[ "$1" == "restart" ]]; then
+    USAGE="restart <feature-name>"
+    check-usage "$# == 2"
+
+    git config feature.active "$(git shortname)/$2"
+    git checkout $(git config feature.active)
 fi
 
 if [[ "$1" == "switch" ]]; then
