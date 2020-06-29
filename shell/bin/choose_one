@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+import sys
+from argparse import ArgumentParser as AP
+
+import logging as _l
+_l.basicConfig(
+        format="%(message)s",
+        level=_l.INFO,
+        stream=sys.stderr
+)
+
+def show(x):
+    print(x, file=sys.stderr)
+
+def choose(opts, num_rtn=False, quiet=False, multi=False):
+    if not opts:
+        if not quiet: show("No options provided")
+        return None
+
+    while True:
+        for i, opt in enumerate(opts, 1):
+            show(f"{i}) {opt}")
+
+        choice = input()
+        try:
+            if multi:
+                choices = [int(c) for c in choice.split()]
+            else:
+                choices = [int(choice)]
+
+            output = []
+            for choice in choices:
+                if choice < 1 or choice > len(opts):
+                    print(f"Invalid num: {choice}")
+                    continue
+
+                if num_rtn:
+                    output.apppend(choice)
+                else:
+                    output.append(opts[choice-1])
+                    return opts[choice-1]
+        except Exception as e:
+            if not quiet: show(e)
+            pass
+
+
+if __name__ == '__main__':
+    parser = AP("Choose from a list")
+    parser.add_argument("opts", nargs="*")
+    parser.add_argument("-n", action="store_true", help="Show number instead of choice")
+    parser.add_argument("-q", action="store_true", help="Silence errors")
+    parser.add_argument("--multi", "-m", action="store_true", help="Allow multiple selection")
+    args = parser.parse_args()
+
+    choice = choose(args.opts, args.n, args.q, args.multi)
+    if choice is None:
+        exit(1)
+    print(choice)
+    exit(0)

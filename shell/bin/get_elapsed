@@ -1,0 +1,12 @@
+#!/bin/bash
+
+source shellrc_lib
+
+if [[ $# != 1 ]]; then
+    echo "Get the length of time for which a process has been running"
+    echo "Usage: $0 tomatch" 1>&2
+    exit 1
+fi
+PID=$(procmatch $1)
+[[ $? == 0 ]] || exit 1
+echo -e "$(procname $PID) (PID: $PID)\n\tElapsed time: $(procetime $PID)"

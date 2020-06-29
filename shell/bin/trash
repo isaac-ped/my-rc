@@ -1,0 +1,32 @@
+#!/bin/bash
+
+if [[ "$#" == "0" ]]; then
+    echo "Move to trash directory without deleting"
+    echo "Usage: $0 things-to-trash..."
+fi
+
+GITREPO=$(git rev-parse --show-toplevel 2> /dev/null)
+if [[ $? == 0 ]]; then
+    LABEL="$(basename $GITREPO)"
+else
+    LABEL="$(basename $(realpath .))"
+fi
+
+TRASHDIR="$HOME/trash/$LABEL/$(date +%F)"
+echo "Moving to $TRASHDIR"
+
+for TOMOVE in $@; do
+    FROMDIR=$(dirname $TOMOVE)
+    TODIR="$TRASHDIR/$FROMDIR"
+    mkdir -p $TODIR
+    TOFILE="$TODIR/$(basename $TOMOVE)"
+    NEWED=false
+    while [[ -e $TOFILE ]]; do
+        TOFILE=${TOFILE}.new
+        NEWED=true
+    done
+    if  $NEWED ; then
+        echo "Using $TOFILE to avoid conflicts"
+    fi
+    mv "$TOMOVE" "$TOFILE"
+done

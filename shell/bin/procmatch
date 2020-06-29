@@ -1,0 +1,54 @@
+#!/bin/bash
+
+source shellrc_lib
+
+if [[ $# < 1 || $# > 2 ]]; then
+    echo "Interactive tool to match a process with a given string"
+    echo "Usage: $0 tomatch [ppid_to_exclude]" 1>&2
+    return 1;
+fi
+
+EXCLUDE_PATTERNS="-e $$ "
+if [[ $# == 2 ]]; then
+    EXCLUDE_PARENT="$2"
+    # This is terrible and I am sorry.
+    # Children of parent process are placed into exclude from grep
+    for PID in $(pstree -p $EXCLUDE_PARENT | \
+            sed 's/\([^0-9][^(]\+(\)/ /g' | \
+            sed 's/^ //g' | \
+            sed 's/)//g' | \
+            sed 's/ /\n/g'); do
+        EXCLUDE_PATTERNS+="-e $PID "
+    done
+fi
+
+PIDS="$(pgrep -f "$1" | grep -v $$)"
+PIDS=( $(echo "$PIDS" | grep -v $EXCLUDE_PATTERNS) )
+NPIDS=${#PIDS[@]}
+if [[ $NPIDS == 0 ]]; then
+    echo "No matching processes for $1" 1>&2
+    return 1;
+fi
+CMDS=()
+NEWPIDS=()
+for PID in ${PIDS[@]}; do
+    if [[ $(procname $PID) != "" ]]; then
+        CMDS+=( "$PID: $(procname $PID)" )
+        NEWPIDS+=( $PID )
+    fi
+done
+if [[ ${#CMDS[@]} == 0 ]]; then
+    echo "No matching processes for $1" 1>&2
+    return 1;
+fi
+if [[ ${#CMDS[@]} == 1 ]]; then
+    echo $NEWPIDS
+    return
+fi
+IDX=$(choose_one -qn "${CMDS[@]}")
+[[ $? == 0 ]] || return 1
+# Bash and ksh use 0-index, all other shells use 1
+if is_bash; then
+    IDX=$(( $IDX - 1 ));
+fi
+echo ${NEWPIDS[$IDX]}

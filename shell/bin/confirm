@@ -1,0 +1,46 @@
+#!/bin/bash
+
+if [[ $# != 2 ]]; then
+    echo "Usage $0 'prompt string' 'default (y|n)'"
+    exit 1
+fi
+
+case "$2" in
+    y|Y)
+        DEFAULT="y"
+        PROMPT="[Yn]"
+        ;;
+    n|N)
+        DEFAULT="n"
+        PROMPT="[Nn]"
+        ;;
+    *)
+        echo "Unknown default: $2" 1>&2
+        exit 1
+        ;;
+esac
+
+while true; do
+    read -p "$1 $PROMPT " OKAY;
+    case "$OKAY" in
+        y|Y)
+            echo "y";
+            exit 0
+            ;;
+        n|N)
+            echo "n";
+            exit 0
+            ;;
+        "")
+            echo "$DEFAULT"
+            exit 0
+            ;;
+        *)
+            echo "Please answer y or n" 1>&2
+            ;;
+    esac
+done
+
+
+
+

@@ -1,0 +1,19 @@
+#!/bin/bash
+
+procname() { ps -o args= -p $@ 2> /dev/null; }
+procetime() { ps -o etime= -p $@; }
+
+# Execute in new tmux shell, and run until exit
+tmux-me() {
+    CMD="${@}"
+    tmux new "source $ME; $CMD; sleep 2"
+}
+
+prompt() {
+    if is_zsh; then
+        read "ANS?$1 "
+    elif is_bash; then
+        read -p "$1 " ANS
+    fi
+    echo $ANS
+}

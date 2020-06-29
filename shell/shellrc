@@ -1,0 +1,182 @@
+#!/bin/bash
+export PS1_HOSTNAME=${PS1_HOSTNAME:-$HOST}
+export PS1_HOSTCOLOR=${PS1_HOSTCOLOR:-'$fg_bold[green]'}
+export EDITOR=vim
+export DEFAULT_HOST=${DEFAULT_HOST:-''}
+export NICKNAME=iped
+
+
+is_zsh() {
+    [[ $(basename $SHELL) == "zsh" ]]
+}
+is_bash() {
+    [[ $(basename $SHELL) == "bash" ]]
+}
+
+
+if is_zsh; then
+    export PROMPT='%(?.%{'$PS1_HOSTCOLOR'%}.%{$fg[red]%})'$PS1_HOSTNAME'%{$fg_bold[cyan]%}[%~% ]%(?.%{$fg[green]%}.%{$fg[red]%})%B$ %b'
+    HERE=$(dirname $0)
+    ME="$0"
+    if [[ ${SHOW_DIRTY_GIT_PROMPT:-false} ]]; then
+        RPS1='$ZSH_THEME_GIT_PROMPT_PREFIX$(git_current_branch)$ZSH_THEME_GIT_PROMPT_SUFFIX'
+    fi
+fi
+
+if is_bash; then
+    HERE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    ME="${BASH_SOURCE[0]}"
+fi
+
+export PATH="$PATH:$HERE/bin:$(realpath $HERE/../git/bin)"
+
+has_default_remote() {
+   ! [[ -z "$DEFAULT_HOST" ]]
+}
+
+get_default_remote() {
+    if has_default_remote; then
+        echo "$DEFAULT_HOST";
+    else
+        echo "No DEFAULT_HOST is set" >&2 ;
+        return 1
+    fi
+}
+
+acti() {
+    if [[ $# == 0 ]]; then
+        CHOICES=$(ls */*/activate)
+        ACTI=$(choose_one $CHOICES)
+        if [[ $? != 0 ]]; then
+            echo "No environments found"
+            return -1;
+        fi
+    else
+        ACTI="$1/bin/activate"
+    fi
+    source $ACTI
+}
+
+_f0() {
+    is_zsh && echo "$funcstack[2]" || echo ${FUNCNAME[1]};
+}
+
+DOCKER_ENTRY="~/docker_dev/mine/rundev.sh"
+ssh-docker() {
+    if [[ $# > 0 ]]; then
+        HOST=$1
+        shift
+    else
+        HOST=$(get_default_remote);
+        if [[ $? != 0 ]]; then
+            return 1;
+        fi
+    fi
+
+    if [[ $( grep -w $HOST ~/.ssh/docker_hosts ) == "" ]]; then
+        \ssh -t $HOST $@;
+    else
+        if [[ $@ != "" ]]; then
+            # Variables should not expand until within docker container
+            CMD="'$@'"
+        else
+            CMD="";
+        fi
+        \ssh -t $HOST "source ~/.profile && $DOCKER_ENTRY $CMD";
+    fi
+}
+
+alias ssh="ssh-docker"
+
+sshh() {
+    if [[ $# > 0 ]]; then
+        HOST=$1
+    else
+        HOST=$(get_default_remote);
+        if [[ $? != 0 ]]; then
+            return 1;
+        fi
+    fi
+    CUR=$(realpath $(pwd) --relative-to ~)
+    ssh $HOST "cd $CUR && \$SHELL"
+}
+
+anyconda() {
+    # There is likely a better way to find active environment
+    if [[ ! $CONDA_SHLVL > 0 ]]; then
+        if [[ "$VIRTUAL_ENV" == "" ]]; then
+            conda activate all;
+        fi
+    fi
+}
+
+alias jupyter='anyconda && jupyter'
+alias imypy='anyconda && mypy --ignore-missing-imports'
+alias flake8='anyconda && flake8'
+alias python='anyconda && python'
+
+black-dir() {
+    if [[ $# != 1 ]]; then
+        echo "Must provide directory"
+        return 1;
+    fi
+    anyconda
+    if find $1 -name '*.py' | grep -v '.ipynb' | grep -v '.vscode' | xargs isort; then
+        black $1
+    fi
+}
+
+finddirs() {
+    if [[ $# == 0 ]]; then
+        echo "Provide filetype"
+        return 1
+    fi
+    find $@ | sed 's|\(\./[^/]*/\).*|\1|g' | uniq
+}
+
+pydirs() {
+    DIRS=$(finddirs -name '*.py')
+    for ENV_FILE in */*/activate; do
+        ENV_DIR=$(dirname $(dirname $ENV_FILE))
+        DIRS=$(grep -v $ENV_DIR <<< $DIRS)
+    done
+    DIRS=($(grep -v .jupyter <<< $DIRS))
+    choose_one --multi $DIRS
+}
+
+pyfiles() {
+    for DIR in $@; do
+        find $DIR -name '*.py' | grep -v '.ipynb' | grep -v '.vscode'
+    done
+}
+
+flake-dir() {
+    if [[ $# == 0 ]]; then
+        DIRS=($(pydirs))
+    else
+        DIRS=($@);
+    fi
+    anyconda
+    pyfiles $DIRS | xargs flake8
+}
+
+mypy-dir() {
+    if [[ $# == 0 ]]; then
+        DIRS=($(pydirs))
+    else
+        DIRS=($@)
+    fi
+    anyconda
+    pyfiles $DIRS | xargs mypy
+}
+
+pylint-dir() {
+    if [[ $# == 0 ]]; then
+        DIRS=($(pydirs))
+    else
+        DIRS=($@);
+    fi
+    anyconda
+    flake-dir $DIRS
+    mypy-dir $DIRS
+}
