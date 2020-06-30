@@ -18,7 +18,7 @@ for HOOKFILE in $HOOKDIR/*/*; do
     YN=$(confirm "Install $HOOKTYPE hook $HOOKNAME into $REPO_HOOKDIR/$HOOKTYPE?" y)
     if [[ $YN == "y" ]]; then
         echo "Installing $HOOKNAME in $REPO_HOOKDIR/$HOOKTYPE";
-        echo "$(realpath $HOOKFILE)" >> $REPO_HOOKDIR/$HOOKTYPE
+        echo "$(realpath $HOOKFILE) || exit 1" >> $REPO_HOOKDIR/$HOOKTYPE
     fi
 done
 
