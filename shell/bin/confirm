@@ -12,7 +12,7 @@ case "$2" in
         ;;
     n|N)
         DEFAULT="n"
-        PROMPT="[Nn]"
+        PROMPT="[yN]"
         ;;
     *)
         echo "Unknown default: $2" 1>&2
