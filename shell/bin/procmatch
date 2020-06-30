@@ -5,7 +5,7 @@ source shellrc_lib
 if [[ $# < 1 || $# > 2 ]]; then
     echo "Interactive tool to match a process with a given string"
     echo "Usage: $0 tomatch [ppid_to_exclude]" 1>&2
-    return 1;
+    exit 1;
 fi
 
 EXCLUDE_PATTERNS="-e $$ "
@@ -27,7 +27,7 @@ PIDS=( $(echo "$PIDS" | grep -v $EXCLUDE_PATTERNS) )
 NPIDS=${#PIDS[@]}
 if [[ $NPIDS == 0 ]]; then
     echo "No matching processes for $1" 1>&2
-    return 1;
+    exit 1;
 fi
 CMDS=()
 NEWPIDS=()
@@ -39,16 +39,18 @@ for PID in ${PIDS[@]}; do
 done
 if [[ ${#CMDS[@]} == 0 ]]; then
     echo "No matching processes for $1" 1>&2
-    return 1;
+    exit 1;
 fi
 if [[ ${#CMDS[@]} == 1 ]]; then
-    echo $NEWPIDS
-    return
+    OK=$(confirm "Process ${CMDS[0]} ?" y)
+    if [[ $OK == "y" ]]; then
+        echo $NEWPIDS
+        exit 0
+    fi
+    exit 1
 fi
 IDX=$(choose_one -qn "${CMDS[@]}")
-[[ $? == 0 ]] || return 1
+[[ $? == 0 ]] || exit 1
 # Bash and ksh use 0-index, all other shells use 1
-if is_bash; then
-    IDX=$(( $IDX - 1 ));
-fi
+IDX=$(( $IDX - 1 ));
 echo ${NEWPIDS[$IDX]}

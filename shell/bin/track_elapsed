@@ -2,30 +2,15 @@
 
 source shellrc_lib
 
-_track_elapsed() {
-    ELAPSED=$(procetime $PID)
-    RTN=$?
-    while [[ $RTN == 0 ]]; do
-        echo -e "$(procname $PID) (PID: $PID)\n\tElapsed time: $ELAPSED" > $OUT
-        clear;
-        cat $OUT
-        sleep 1
-        ELAPSED=$(procetime $PID)
-        RTN=$?
-    done
-    clear;
-    echo "Completed at $(date)" >> $OUT
-    cat $OUT
-}
-
 
 TRACKDIR=/tmp/time_tracks
 if [[ $# < 1 ]]; then
     echo "Usage: $(_f0) tomatch [label]" 1>&2
-    return 1;
+    exit 1;
 fi
-PID=$(procmatch $1)
-[[ $? == 0 ]] || return 1
+
+PID=$(procmatch $1 $$)
+[[ $? == 0 ]] || exit 1
 if [[ $# < 2 ]]; then
     OUT=$( echo $TRACKDIR/$1 | sed -s 's/ //g')
 else
@@ -33,5 +18,5 @@ else
 fi
 mkdir -p $TRACKDIR
 
-tmux-me PID=$PID OUT=$OUT _track_elapsed
+tmux-me "PID=$PID OUT=$OUT _track_elapsed"
 cat $OUT

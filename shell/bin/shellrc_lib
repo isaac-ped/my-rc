@@ -1,11 +1,13 @@
 #!/bin/bash
 
+ME=${BASH_SOURCE}
+
 procname() { ps -o args= -p $@ 2> /dev/null; }
 procetime() { ps -o etime= -p $@; }
 
 # Execute in new tmux shell, and run until exit
 tmux-me() {
-    CMD="${@}"
+    CMD="$1"
     tmux new "source $ME; $CMD; sleep 2"
 }
 
@@ -16,4 +18,22 @@ prompt() {
         read -p "$1 " ANS
     fi
     echo $ANS
+}
+
+_track_elapsed() {
+    PROCNAME=$(procname $PID)
+    ELAPSED=$(procetime $PID)
+    RTN=$?
+    while [[ $RTN == 0 ]]; do
+        echo -e "Tracking progress of\n\t$PROCNAME" > $OUT
+        echo -e "Elapsed time:\n$ELAPSED" >> $OUT
+        clear;
+        cat $OUT
+        sleep 1
+        ELAPSED=$(procetime $PID)
+        RTN=$?
+    done
+    clear;
+    echo "Completed at $(date)" >> $OUT
+    cat $OUT
 }

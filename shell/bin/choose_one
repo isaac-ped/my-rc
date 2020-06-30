@@ -32,13 +32,15 @@ def choose(opts, num_rtn=False, quiet=False, multi=False):
             for choice in choices:
                 if choice < 1 or choice > len(opts):
                     print(f"Invalid num: {choice}")
-                    continue
+                    output = []
+                    break
 
                 if num_rtn:
-                    output.apppend(choice)
+                    output.append(str(choice))
                 else:
                     output.append(opts[choice-1])
-                    return opts[choice-1]
+
+            return ' '.join(output)
         except Exception as e:
             if not quiet: show(e)
             pass

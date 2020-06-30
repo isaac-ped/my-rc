@@ -1,15 +1,19 @@
 #!/bin/bash
 # Interactive kill command that utilizes procmatch
 
+if [[ $# == 0 ]]; then
+    echo "Usage: $(basename $0) string-to-match"
+    exit 1
+fi
+
 set -eu
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-source $DIR/../shellrc
+source shellrc_lib
 
 PID_TO_KILL=$(procmatch "$@" $$)
 
-read -p "Kill process ${PID_TO_KILL} ($(procname $PID_TO_KILL))? [yn] " -n 1 -r
+OK=$(confirm "Kill process ${PID_TO_KILL} ($(procname $PID_TO_KILL))?" n)
 echo
 
-if [[ $REPLY == "y" ]]; then
+if [[ $OK == "y" ]]; then
     kill $PID_TO_KILL
 fi
