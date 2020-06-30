@@ -5,3 +5,5 @@
 .*.okflake*
 .*.okmypy*
 trash/
+.mypy_cache
+*.orig
