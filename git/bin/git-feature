@@ -150,9 +150,16 @@ if [[ "$1" == "merge-into" ]]; then
     USAGE="merge-into <non-feature-branch>"
     check-usage "$# = 2"
     MAIN=$(git config feature.active)
+    if [[ $MAIN != $(git rev-parse --abbrev-ref HEAD) ]]; then
+        echo "Not on branch $MAIN!"
+        if [[ $(confirm "Merge $MAIN to $2 anyway?" n) == "n" ]]; then
+            exit 1;
+        fi
+    fi
     NON_FEATURE="$2"
     git checkout $NON_FEATURE
     git merge --no-ff $MAIN
+    git checkout $MAIN
     exit
 fi
 
