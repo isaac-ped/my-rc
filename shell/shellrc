@@ -64,7 +64,14 @@ _f0() {
 DOCKER_ENTRY="~/docker_dev/mine/rundev.sh"
 ssh-docker() {
     if [[ $# > 0 ]]; then
-        HOST=$1
+        if [[ $1 == '-' ]]; then
+            HOST=$(get_default_remote)
+            if [[ $? != 0 ]]; then
+                return 1
+            fi
+        else
+            HOST=$1
+        fi
         shift
     else
         HOST=$(get_default_remote);
@@ -90,15 +97,22 @@ alias ssh="ssh-docker"
 
 sshh() {
     if [[ $# > 0 ]]; then
-        HOST=$1
+        HOST="$1"
     else
-        HOST=$(get_default_remote);
-        if [[ $? != 0 ]]; then
-            return 1;
-        fi
+        HOST="-"
     fi
     CUR=$(realpath $(pwd) --relative-to ~)
     ssh $HOST "cd $CUR && \$SHELL"
+}
+
+sshl() {
+    if [[ $# > 0 ]]; then
+        HOST="$1"
+    else
+        HOST="-"
+    fi
+    CUR=$(realpath $(pwd) --relative-to ~)
+    ssh $HOST "cd ~/local/$CUR && \$SHELL"
 }
 
 anyconda() {
@@ -115,16 +129,6 @@ alias imypy='anyconda && mypy --ignore-missing-imports'
 alias flake8='anyconda && flake8'
 alias python='anyconda && python'
 
-black-dir() {
-    if [[ $# != 1 ]]; then
-        echo "Must provide directory"
-        return 1;
-    fi
-    anyconda
-    if find $1 -name '*.py' | grep -v '.ipynb' | grep -v '.vscode' | xargs isort; then
-        black $1
-    fi
-}
 
 finddirs() {
     if [[ $# == 0 ]]; then
@@ -135,6 +139,7 @@ finddirs() {
 }
 
 pydirs() {
+    setopt NULL_GLOB
     DIRS=$(finddirs -name '*.py')
     for ENV_FILE in */*/activate; do
         ENV_DIR=$(dirname $(dirname $ENV_FILE))
@@ -144,38 +149,41 @@ pydirs() {
     choose_one --multi $DIRS
 }
 
+if_nargs() {
+    if [[ $# > 1 ]]; then
+        shift
+        echo "${@[*]}";
+    else
+        $1;
+    fi
+}
+
 pyfiles() {
     for DIR in $@; do
         find $DIR -name '*.py' | grep -v '.ipynb' | grep -v '.vscode'
     done
 }
 
+black-dir() {
+    DIRS=( $(if_nargs pydirs $@) )
+    anyconda
+    pyfiles $DIRS | xargs black
+}
+
 flake-dir() {
-    if [[ $# == 0 ]]; then
-        DIRS=($(pydirs))
-    else
-        DIRS=($@);
-    fi
+    DIRS=( $(if_nargs pydirs $@) )
     anyconda
     pyfiles $DIRS | xargs flake8
 }
 
 mypy-dir() {
-    if [[ $# == 0 ]]; then
-        DIRS=($(pydirs))
-    else
-        DIRS=($@)
-    fi
+    DIRS=( $(if_nargs pydirs $@) )
     anyconda
     pyfiles $DIRS | xargs mypy
 }
 
 pylint-dir() {
-    if [[ $# == 0 ]]; then
-        DIRS=($(pydirs))
-    else
-        DIRS=($@);
-    fi
+    DIRS=( $(if_nargs pydirs $@) )
     anyconda
     flake-dir $DIRS
     mypy-dir $DIRS
