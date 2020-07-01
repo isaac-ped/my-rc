@@ -188,3 +188,71 @@ pylint-dir() {
     flake-dir $DIRS
     mypy-dir $DIRS
 }
+
+
+host_from_arg() {
+    # Remove before the colon
+    HOST="${1%%:*}"
+    if [[ $HOST != $1 ]]; then # there is a host portion
+        echo "$HOST"
+    else
+        if ! has_default_remote; then
+            echo "No host provided! Set DEFAULT_HOST or provide as argument." >&2
+            return 1
+        fi
+        echo "$DEFAULT_HOST";
+    fi
+}
+
+copydown() {
+    if [[ $# < 1 ]]; then
+        echo "usage: $(_f0) [host:]source [dst] [-f]"
+    fi
+
+    # Remove pre-colon for filename
+    FILE="${1#*:}"
+    HOST=$(host_from_arg $1)
+    if [[ $? != 0 ]]; then
+        return 1
+    fi
+
+    cur=$(realpath $(pwd) --relative-to ~)
+    SRC=$cur/$FILE
+    DST=$FILE
+    if [[ $# > 1 ]]; then
+        DST=$2
+    fi
+    if [[ -e $DST && $3 != "-f" ]]; then
+        echo "Delete $DST before proceeding"
+        return 1
+    fi
+    scp -r $HOST:$SRC $DST
+}
+
+copyup() {
+    if [[ $# < 1 ]]; then
+        echo "usage: $(_f0) source [[host:]dst]"
+    fi
+    DST=$(realpath $1 --relative-to ~)
+
+    HOST=$(host_from_arg $2)
+    if [[ $? != 0 ]]; then
+        return 1;
+    fi
+
+    if [[ $# > 1 ]]; then
+        DST=${2#*:}
+    fi
+
+    scp $1 $HOST:$DST
+}
+
+xfcopy() {
+    if [[ $# != 1 ]]; then
+        echo "usage: $(_f0) filename"
+        return 1;
+    fi
+    xclip -i -sel c -f < $1 | xclip -i -sel p
+}
+alias xcopy="xclip -i -sel c -f | xclip -i -sel p"
+alias xopen='xdg-open'
