@@ -25,8 +25,8 @@ done
 ATTRS_LINE='*.py filter=python'
 ATTRS_FILE="$(git base-dir)/.gitattributes"
 
-if ! grep "$ATRS_LINE" $ATTRS_FILE > /dev/null ; then
-    echo "$ATTRS_FILE" >> $ATTRS_FILE
+if ! grep "$ATRS_LINE" $ATTRS_FILE 2> /dev/null 1> /dev/null ; then
+    echo "$ATTRS_LINE" >> $ATTRS_FILE
 else
     echo "$ATTRS_LINE" already in "$ATTRS_FILE"
 fi
