@@ -1,6 +1,8 @@
 #!/bin/bash
 # Helper script to install links to this in rc files
 
+THISDIR="$(realpath $(dirname $0))"
+
 TAG="### INSERTED FROM MYRC"
 
 is_zsh() {
@@ -25,11 +27,6 @@ elif is_bash; then
     SHELLRC="$HOME/.bashrc"
 fi
 
-if grep "$TAG" $SHELLRC 2>&1 > /dev/null; then
-    echo "Already appears to be inserted in $SHELLRC"
-    echo "Cowardly refusing. Delete '$TAG' from $SHELLRC to continue"
-    exit 1
-fi
 
 get_setting(){
     while true; do
@@ -41,6 +38,23 @@ get_setting(){
         fi
     done
 }
+
+
+MY_GIT_SHORTNAME=$(get_setting "git shortname (maybe ${USER:0:4}?)")
+
+echo "Installing git configuration"
+set -x
+git config --global core.excludesFile $(realpath $THISDIR/../git/gitignore_global)
+git config --global include.path $(realpath $THISDIR/../git/gitconfig)
+git config --global user.shortname $MY_GIT_SHORTNAME
+set +x
+exit 0
+
+if grep "$TAG" $SHELLRC 2>&1 > /dev/null; then
+    echo "Already appears to be inserted in $SHELLRC"
+    echo "Cowardly refusing. Delete '$TAG' from $SHELLRC to continue"
+    exit 1
+fi
 
 MY_HOSTNAME=$(get_setting "prompt hostname")
 MY_DEFAULT_HOST=$(get_setting "default host for ssh")
@@ -56,7 +70,6 @@ if is_zsh; then
     done
 fi
 
-THISDIR="$(realpath $(dirname $0))"
 
 TO_EXPORT="
 $TAG
@@ -66,8 +79,6 @@ PS1_HOSTNAME=\"$MY_HOSTNAME\"
 PS1_HOSTCOLOR='\${fg[$BASE_PROMPTCOLOR]}'
 RCDIR='$THISDIR'
 "
-
-echo $THISDIR
 
 for RC_FILE in $THISDIR/*rc; do
     TO_EXPORT+="
