@@ -126,7 +126,7 @@ anyconda() {
 
 alias jupyter='anyconda && jupyter'
 alias imypy='anyconda && mypy --ignore-missing-imports'
-alias flake8='anyconda && flake8'
+alias flake8='anyconda && flake8 --max-line-length=88'
 alias python='anyconda && python'
 
 
