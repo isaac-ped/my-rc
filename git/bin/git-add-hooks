@@ -23,9 +23,9 @@ for HOOKFILE in $HOOKDIR/*/*; do
 done
 
 ATTRS_LINE='*.py filter=python'
-ATTRS_FILE="$(git base-dir)/.gitattributes"
+ATTRS_FILE="$(git base-dir)/.git/info/attributes"
 
-if ! grep "$ATRS_LINE" $ATTRS_FILE 2> /dev/null 1> /dev/null ; then
+if ! grep ".py filter=python" $ATTRS_FILE 2> /dev/null 1> /dev/null ; then
     echo "$ATTRS_LINE" >> $ATTRS_FILE
 else
     echo "$ATTRS_LINE" already in "$ATTRS_FILE"
