@@ -16,7 +16,7 @@
     save = "!f() { if [ $# -ne 2 ]; then echo 'Usage: git save <label> \"message\" '; return; fi; git -c filters.python.clean=cat add -u :/ && git commit --no-verify -m \"$2\" && git branch $(git shortname)/saved/$1 && git reset HEAD^; }; f"
     mdiff = diff --ext-diff='git-nbdiffdriver'
     url = !git remote -v | head -1 | cut -f 2 | cut -d ' ' -f 1 && :
-    remote-add-default = !git remote add dev ssh://$DEFAULT_HOST/~/$(realpath --relative-to ~ $(git rev-parse --show-toplevel) )
+    remote-add-default = !git remote add dev ssh://$(ssh-config - hostname)/~/$(realpath --relative-to ~ $(git rev-parse --show-toplevel) )
     ls = ls-tree --name-only HEAD
     pcom = !git pull --ff-only && git commit
     wdiff = diff --color-words='(\"[^\"]+\")|([^ ,]+)|.'
