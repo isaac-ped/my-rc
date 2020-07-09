@@ -1,0 +1,14 @@
+#!/bin/bash
+###
+# Checks if any patterns in `git config rules.exclusions` are in the repo
+###
+
+
+
+for pattern in $(git config rules.exclusions); do
+    if git grep --cached $pattern; then
+        echo "Refusing to commit because pattern '$pattern' was present"
+        exit 1
+    fi
+done
+
