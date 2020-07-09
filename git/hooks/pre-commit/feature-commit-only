@@ -4,8 +4,9 @@ CURR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 CURR_FEATURE=$(git feature get)
 
 if [[ "$CURR_BRANCH" != $CURR_FEATURE/* ]]; then
-    echo "You can only commit on feature branches (not $CURR_BRANCH)!"
-    exit 1;
+    echo "You should only commit on feature branches (not $CURR_BRANCH)..."
+    sleep 2
+    exit 0;
 fi
 
 BAD_FEATURES=$(git config feature.merge-only)
