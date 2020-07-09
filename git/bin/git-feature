@@ -50,6 +50,16 @@ if [[ "$1" == "start" ]]; then
     exit
 fi
 
+if [[ "$1" == "clean" ]]; then
+    USAGE="clean"
+    check-usage "$# == 1"
+
+    for BRANCH in $(git for-each-ref --format="%(refname:short)" --merged $(git config feature.active) refs/heads/$(get-feature)); do
+        git branch -d $BRANCH;
+    done
+    exit
+fi
+
 if [[ "$1" == "restart" ]]; then
     USAGE="restart <feature-name>"
     check-usage "$# == 2"
