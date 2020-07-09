@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+from argparse import ArgumentParser
+import re, yaml
+
+parser = ArgumentParser()
+parser.add_argument("yml_file")
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument("to_match", nargs="?", default=None)
+group.add_argument("-m", "--match", dest="to_match")
+parser.add_argument("-k", "--key", required=False)
+parser.add_argument("-q", "--quiet", action='store_true')
+args = parser.parse_args()
+
+try:
+    with open(args.yml_file) as f:
+        entries = yaml.load(f, Loader=yaml.SafeLoader)
+except FileNotFoundError:
+    if args.quiet:
+        exit(1)
+    raise
+
+for k, v in entries.items():
+    if re.fullmatch(k, args.to_match):
+        if args.key and args.key not in v:
+            continue
+        if args.key:
+            v = v[args.key]
+
+        print(re.sub(k, v, args.to_match))
+        exit(0)
