@@ -1,0 +1,53 @@
+#!/bin/bash
+
+set -e
+
+usage() {
+    echo "Usage: $(basename $0) [--host remote_host] [--name remote_name]" >&2
+}
+
+HOSTKEY='-'
+NAME=""
+
+while (( "$#" )); do # While there are arguments left
+    case "$1" in
+        --host)
+            HOSTKEY=$2
+            shift 2
+            ;;
+        --name)
+            NAME=$2
+            shift 2
+            ;;
+        *)
+            echo "Error: Unsupported argument $1" >&2
+            usage
+            exit 1
+            ;;
+        --help)
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+HOST=$(ssh-config $HOSTKEY hostname $HOSTKEY)
+
+if [[ $HOST == "" ]]; then
+    echo "No default host set: --host required" >&2
+    usage
+    exit 1
+fi
+
+if [[ $NAME == "" ]]; then
+    if [[ $HOSTKEY == "-" ]]; then
+        NAME="$HOST"
+    else
+        NAME="$HOSTKEY"
+    fi
+fi
+
+REPO=$(realpath --relative-to ~ $(git rev-parse --show-toplevel))
+PREFIX=$(ssh-config $HOSTKEY root-dir "~/")
+
+git remote add $NAME ssh://$HOST/$PREFIX/$REPO
