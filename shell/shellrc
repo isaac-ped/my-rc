@@ -2,7 +2,6 @@
 export PS1_HOSTNAME=${PS1_HOSTNAME:-$HOST}
 export PS1_HOSTCOLOR=${PS1_HOSTCOLOR:-'$fg_bold[green]'}
 export EDITOR=vim
-export DEFAULT_HOST=${DEFAULT_HOST:-''}
 export NICKNAME=iped
 
 
@@ -30,19 +29,6 @@ fi
 
 export PATH="$PATH:$HERE/bin:$(realpath $HERE/../git/bin)"
 
-has_default_remote() {
-   ! [[ -z "$DEFAULT_HOST" ]]
-}
-
-get_default_remote() {
-    if has_default_remote; then
-        echo "$DEFAULT_HOST";
-    else
-        echo "No DEFAULT_HOST is set" >&2 ;
-        return 1
-    fi
-}
-
 acti() {
     if [[ $# == 0 ]]; then
         CHOICES=$(ls */*/activate)
@@ -61,58 +47,12 @@ _f0() {
     is_zsh && echo "$funcstack[2]" || echo ${FUNCNAME[1]};
 }
 
-DOCKER_ENTRY="~/docker_dev/mine/rundev.sh"
-ssh-docker() {
-    if [[ $# > 0 ]]; then
-        if [[ $1 == '-' ]]; then
-            HOST=$(get_default_remote)
-            if [[ $? != 0 ]]; then
-                return 1
-            fi
-        else
-            HOST=$1
-        fi
-        shift
-    else
-        HOST=$(get_default_remote);
-        if [[ $? != 0 ]]; then
-            return 1;
-        fi
-    fi
-
-    if [[ $( grep -w $HOST ~/.ssh/docker_hosts ) == "" ]]; then
-        \ssh -t $HOST $@;
-    else
-        if [[ $@ != "" ]]; then
-            # Variables should not expand until within docker container
-            CMD="'$@'"
-        else
-            CMD="";
-        fi
-        \ssh -t $HOST "source ~/.profile && $DOCKER_ENTRY $CMD";
-    fi
-}
-
-alias ssh="ssh-docker"
-
-sshh() {
-    if [[ $# > 0 ]]; then
-        HOST="$1"
-    else
-        HOST="-"
-    fi
-    CUR=$(realpath $(pwd) --relative-to ~)
-    ssh $HOST "cd $CUR && \$SHELL"
-}
+export BETTERSSH_CONFIG=$(realpath ~/.ssh/host-config.yml)
+alias ssh="better-ssh"
+alias sshh="better-ssh -h "
 
 sshl() {
-    if [[ $# > 0 ]]; then
-        HOST="$1"
-    else
-        HOST="-"
-    fi
-    CUR=$(realpath $(pwd) --relative-to ~)
-    ssh $HOST "cd ~/local/$CUR && \$SHELL"
+    sshh ${1}-l
 }
 
 anyconda() {
@@ -173,7 +113,7 @@ black-dir() {
 flake-dir() {
     DIRS=( $(if_nargs pydirs $@) )
     anyconda
-    pyfiles $DIRS | xargs flake8
+    pyfiles $DIRS | xargs flake8 --max-line-length=88
 }
 
 mypy-dir() {
@@ -196,33 +136,44 @@ host_from_arg() {
     if [[ $HOST != $1 ]]; then # there is a host portion
         echo "$HOST"
     else
-        if ! has_default_remote; then
-            echo "No host provided! Set DEFAULT_HOST or provide as argument." >&2
-            return 1
-        fi
-        echo "$DEFAULT_HOST";
+        echo $(ssh-config - hostname)
     fi
 }
 
 copydown() {
     if [[ $# < 1 ]]; then
-        echo "usage: $(_f0) [host:]source [dst] [-f]"
+        echo "usage: $(_f0) [-f] [host:]source [dst]"
+    fi
+
+    FORCE=0
+    if [[ $1 == '-f' ]]; then
+        FORCE=1;
+        shift
+    fi
+
+    LOCAL_PREFIX=""
+    if [[ $# > 0 && $1 == "--local" ]]; then
+        LOCAL_PREFIX="local/"
+        shift
     fi
 
     # Remove pre-colon for filename
     FILE="${1#*:}"
-    HOST=$(host_from_arg $1)
+    HOSTKEY=$(host_from_arg $1)
     if [[ $? != 0 ]]; then
         return 1
     fi
 
+    PREFIX=$(ssh-config $HOSTKEY root-dir '~')
+    HOST=$(ssh-config $HOSTKEY hostname $HOSTKEY)
+
     cur=$(realpath $(pwd) --relative-to ~)
-    SRC=$cur/$FILE
+    SRC=${PREFIX}/$cur/$FILE
     DST=$FILE
     if [[ $# > 1 ]]; then
         DST=$2
     fi
-    if [[ -e $DST && $3 != "-f" ]]; then
+    if [[ -e $DST && $FORCE != 1 ]]; then
         echo "Delete $DST before proceeding"
         return 1
     fi
@@ -233,18 +184,25 @@ copyup() {
     if [[ $# < 1 ]]; then
         echo "usage: $(_f0) source [[host:]dst]"
     fi
-    DST=$(realpath $1 --relative-to ~)
 
-    HOST=$(host_from_arg $2)
+    HOSTKEY=$(host_from_arg $2)
     if [[ $? != 0 ]]; then
         return 1;
     fi
+    HOST=$(ssh-config $HOSTKEY hostname $HOSTKEY)
+    PREFIX=$(ssh-config $HOSTKEY root-dir '~')
+
+    DST=$(realpath $1 --relative-to ~)
 
     if [[ $# > 1 ]]; then
-        DST=${2#*:}
+        MAN_DST=${2#*:}
+        if [[ $MAN_DST != "" ]]; then
+            DST=$MAN_DST
+        fi
     fi
 
-    scp $1 $HOST:$DST
+    set -x
+    scp $1 $HOST:$PREFIX/$DST
 }
 
 xfcopy() {
