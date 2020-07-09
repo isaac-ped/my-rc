@@ -12,6 +12,7 @@ for HOOKFILE in $HOOKDIR/*/*; do
     fi
     if grep $HOOKNAME $REPO_HOOKDIR/$HOOKTYPE 2>/dev/null; then
         echo "$HOOKNAME already installed"
+        chmod +x $REPO_HOOKDIR/$HOOKTYPE
         continue;
     fi
 
@@ -19,15 +20,17 @@ for HOOKFILE in $HOOKDIR/*/*; do
     if [[ $YN == "y" ]]; then
         echo "Installing $HOOKNAME in $REPO_HOOKDIR/$HOOKTYPE";
         echo "$(realpath $HOOKFILE) || exit 1" >> $REPO_HOOKDIR/$HOOKTYPE
+        chmod +x $REPO_HOOKDIR/$HOOKTYPE
     fi
 done
 
-ATTRS_LINE='*.py filter=python'
 ATTRS_FILE="$(git base-dir)/.git/info/attributes"
 
-if ! grep ".py filter=python" $ATTRS_FILE 2> /dev/null 1> /dev/null ; then
-    echo "$ATTRS_LINE" >> $ATTRS_FILE
-else
-    echo "$ATTRS_LINE" already in "$ATTRS_FILE"
-fi
+for ATTRS_LINE in '*.py filter=python' '*.sh filter=shell'; do
+    if ! grep "$ATTRS_LINE" $ATTRS_FILE 2> /dev/null 1> /dev/null ; then
+        echo "$ATTRS_LINE" >> $ATTRS_FILE
+    else
+        echo "$ATTRS_LINE" already in "$ATTRS_FILE"
+    fi
+done
 exit
