@@ -70,11 +70,21 @@ if is_zsh; then
     done
 fi
 
+if [[ -e ~/.ssh/host-config.yml ]]; then
+    echo "better-ssh config already exists (~/.ssh/host-config.yml)"
+    echo "Not adding default host"
+else
+    echo "
+    -l?:
+        hostname: $MY_DEFAULT_HOST
+    " > ~/.ssh/host-config.yml
+    echo "Created ~/.ssh/host-config.yml"
+fi
+
 
 TO_EXPORT="
 $TAG
 
-export DEFAULT_HOST=\"$MY_DEFAULT_HOST\"
 PS1_HOSTNAME=\"$MY_HOSTNAME\"
 PS1_HOSTCOLOR='\${fg[$BASE_PROMPTCOLOR]}'
 RCDIR='$THISDIR'
