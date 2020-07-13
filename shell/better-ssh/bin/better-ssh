@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-HOSTKEY="-"
+HOSTKEY=""
 GOHERE=0
 
 while (( "$#" )); do # While there are arguments left
@@ -22,12 +22,12 @@ if [[ $GOHERE != 0 && $# > 0 ]]; then
     exit 1
 fi
 
-if ! HOST=$(ssh-config $HOSTKEY hostname $HOSTKEY); then
+if ! HOST=$(ssh-config "$HOSTKEY" hostname "$HOSTKEY"); then
     exit 1
 fi
 
 CMD=""
-ROOT="$(ssh-config $HOSTKEY root-dir "~")"
+ROOT="$(ssh-config "$HOSTKEY" root-dir "~")"
 
 if [[ $# > 0 ]]; then
     CMD="cd $ROOT && $@"
@@ -36,7 +36,7 @@ elif [[ $GOHERE == 1 ]]; then
     CMD="cd $ROOT && cd $CUR && \$SHELL"
 fi
 
-if PREFIX="$(ssh-config $HOST entrypoint)"; then
+if PREFIX="$(ssh-config "$HOST" entrypoint)"; then
     if [[ $CMD != "" ]]; then
         BASE_CMD="$CMD"
         CMD="$PREFIX '$BASE_CMD'"
