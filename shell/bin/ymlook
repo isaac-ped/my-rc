@@ -38,12 +38,21 @@ def find_item(map: Dict, key_list: str) -> Tuple[List[str], Optional[str]]:
 groups, value = find_item(entries, args.keys)
 if value is not None:
     # No matched groups, so job is simple
-    if not any(groups):
+    if not groups:
+        if isinstance(value, list):
+            value = ' '.join(value)
         print(value)
         exit(0)
 
     # Otherwise, you may have to substitute matched groups
-    # This smells. Create a regular expression which is just the matched groups
-    # This will almost certainly break eventually
-    mock_re = '.*'+ '.*?'.join([f'({g})' for g in groups if g]) + '.*'
-    print(re.sub(mock_re, value, ''.join(args.keys)))
+    # I cannot find a good way to do this with the re library,
+    # so I am manually looking for backreferences.
+    # It is messy. It will break if anything complicated happens
+
+    for i in range(10):
+        if f'\\{i}' in value:
+            value = value.replace(f'\\{i}', groups[i-1])
+    print(value)
+    exit(0)
+
+exit(2)
