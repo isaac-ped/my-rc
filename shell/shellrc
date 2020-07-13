@@ -12,13 +12,18 @@ is_bash() {
     [[ $(basename $SHELL) == "bash" ]]
 }
 
-
 if is_zsh; then
-    export PROMPT='%(?.%{'$PS1_HOSTCOLOR'%}.%{$fg[red]%})'$PS1_HOSTNAME'%{$fg_bold[cyan]%}[%~% ]%(?.%{$fg[green]%}.%{$fg[red]%})%B$ %b'
     HERE=$(dirname $0)
-    ME="$0"
-    if [[ ${SHOW_DIRTY_GIT_PROMPT:-1} == 0 ]]; then
-        RPS1='$ZSH_THEME_GIT_PROMPT_PREFIX$(git_current_branch)$ZSH_THEME_GIT_PROMPT_SUFFIX'
+    if [[ ! -e ${HERE}/shellrc-cfg.yml ]]; then
+        cp ${HERE}/shellrc-cfg-default.yml ${HERE}/shellrc-cfg.yml
+    fi
+    eval "$(ymlook --eval $HERE/shellrc-cfg.yml zsh prompt)"
+
+    if [[ ${ps1} != "" ]]; then
+        export PROMPT=${(e)ps1}
+        if [[ ${SHOW_DIRTY_GIT_PROMPT:-1} == 1 ]]; then
+            RPS1='$ZSH_THEME_GIT_PROMPT_PREFIX$(git_current_branch)$ZSH_THEME_GIT_PROMPT_SUFFIX'
+        fi
     fi
 fi
 
