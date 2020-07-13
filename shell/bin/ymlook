@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple, Optional
 
 parser = ArgumentParser()
 parser.add_argument("-q", "--quiet", action='store_true')
+parser.add_argument('--eval', action='store_true', help="print dicts as evaluatable string")
 parser.add_argument("yml_file")
 parser.add_argument("keys", nargs=argparse.REMAINDER)
 args = parser.parse_args()
@@ -37,6 +38,11 @@ def find_item(map: Dict, key_list: str) -> Tuple[List[str], Optional[str]]:
 
 groups, value = find_item(entries, args.keys)
 if value is not None:
+
+    if args.eval and isinstance(value, dict):
+        print(" ".join(f"{k}='{v}'" for k, v in value.items()))
+        exit(0)
+
     # No matched groups, so job is simple
     if not groups:
         if isinstance(value, list):
