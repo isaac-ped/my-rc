@@ -28,6 +28,10 @@ if is_bash; then
 fi
 
 export PATH="$PATH:$HERE/bin:$(realpath $HERE/../git/bin)"
+if ! which realpath > /dev/null 2> /dev/null; then
+    alias realpath=_realpath;
+fi
+
 source "$HERE/better-ssh/shellrc"
 
 acti() {
