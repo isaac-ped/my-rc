@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [[ "$(basename $SHELL)" == bash ]]; then
+    HERE="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+elif [[ "$(basename $SHELL)" == "zsh" ]]; then
+    HERE="$(dirname $0)"
+fi
+
+export PATH="$PATH:$(realpath $HERE/bin)"
+export BETTERSSH_CONFIG=$(realpath ~/.ssh/host-config.yml)
+alias ssh="better-ssh"
+alias sshh="better-ssh -h"
+
+sshl() {
+    sshh ${1}-l
+}
