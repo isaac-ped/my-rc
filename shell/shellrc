@@ -14,6 +14,16 @@ is_bash() {
 
 if is_zsh; then
     HERE=$(dirname $0)
+elif is_bash; then
+    HERE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+fi
+
+export PATH="$PATH:$HERE/bin:$(realpath $HERE/../git/bin)"
+if ! which realpath > /dev/null 2> /dev/null; then
+    alias realpath=_realpath;
+fi
+
+if is_zsh; then
     if [[ ! -e ${HERE}/shellrc-cfg.yml ]]; then
         cp ${HERE}/shellrc-cfg-default.yml ${HERE}/shellrc-cfg.yml
     fi
@@ -25,16 +35,6 @@ if is_zsh; then
             RPS1='$ZSH_THEME_GIT_PROMPT_PREFIX$(git_current_branch)$ZSH_THEME_GIT_PROMPT_SUFFIX'
         fi
     fi
-fi
-
-if is_bash; then
-    HERE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    ME="${BASH_SOURCE[0]}"
-fi
-
-export PATH="$PATH:$HERE/bin:$(realpath $HERE/../git/bin)"
-if ! which realpath > /dev/null 2> /dev/null; then
-    alias realpath=_realpath;
 fi
 
 source "$HERE/better-ssh/shellrc"
