@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -u
+
+if [[ $# != 2 && $# != 3 ]]; then
+    echo "Usage: $0 host key [default]" >&2
+    exit 1;
+fi
+
+VALUE=$(ymlook $BETTERSSH_CONFIG "$1" "$2")
+RTN=$?
+if [[ $RTN == 1 ]]; then
+    exit 1;
+fi
+if [[ $RTN == 2 && $# == 3 ]]; then
+    # Did not match anything
+    echo "$3"
+    exit 0
+fi
+if [[ $RTN == 0 ]]; then
+    if [[ "$VALUE" != $1 && "$2" == "hostname" ]]; then
+        ssh-config "$VALUE" hostname "$VALUE"
+    else
+        echo $VALUE
+    fi
+    exit 0
+fi
+exit 1

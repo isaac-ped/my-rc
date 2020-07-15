@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
+import argparse
 from argparse import ArgumentParser
 import re, yaml
+import pprint
+from typing import Dict, List, Tuple, Optional
 
 parser = ArgumentParser()
-parser.add_argument("yml_file")
-group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument("to_match", nargs="?", default=None)
-group.add_argument("-m", "--match", dest="to_match")
-parser.add_argument("-k", "--key", required=False)
 parser.add_argument("-q", "--quiet", action='store_true')
+parser.add_argument('--eval', action='store_true', help="print dicts as evaluatable string")
+parser.add_argument('--pretty', action='store_true', help="pretty-print dicts")
+parser.add_argument("yml_file")
+parser.add_argument("keys", nargs=argparse.REMAINDER)
 args = parser.parse_args()
 
 try:
@@ -19,12 +21,49 @@ except FileNotFoundError:
         exit(1)
     raise
 
-for k, v in entries.items():
-    if re.fullmatch(k, args.to_match):
-        if args.key and args.key not in v:
+def find_item(map: Dict, key_list: str) -> Tuple[List[str], Optional[str]]:
+    """ For a dictionary of regular expressions,
+    returns the leaf which recursively matches the passed in values
+    :returns: (Matched groups throughout recursive tree navigation, final value)
+    """
+    for k, v in map.items():
+        match = re.fullmatch(k, key_list[0])
+        if not match:
             continue
-        if args.key:
-            v = v[args.key]
+        if len(key_list) > 1:
+            groups, value = find_item(v, key_list[1:])
+            if value is not None:
+                return list(match.groups()) + groups, value
+        else:
+            return list(match.groups()), v
+    return [], None
 
-        print(re.sub(k, v, args.to_match))
+groups, value = find_item(entries, args.keys)
+if value is not None:
+
+    if args.eval and isinstance(value, dict):
+        print(" ".join(f"{k}='{v}'" for k, v in value.items()))
         exit(0)
+    if args.pretty:
+        pprint.pprint(value)
+        exit(0)
+
+    # No matched groups, so job is simple
+    if not groups:
+        if isinstance(value, list):
+            value = ' '.join(value)
+        print(value)
+        exit(0)
+
+    # Otherwise, you may have to substitute matched groups
+    # I cannot find a good way to do this with the re library,
+    # so I am manually looking for backreferences.
+    # It is messy. It will break if anything complicated happens
+
+    for i in range(10):
+        if f'\\{i}' in value:
+            value = value.replace(f'\\{i}', groups[i-1])
+    print(value)
+    exit(0)
+
+exit(2)

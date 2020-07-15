@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+import os
+from argparse import ArgumentParser
+
+parser = ArgumentParser("standin for when realpath doesn't exist o.O " )
+parser.add_argument("path")
+parser.add_argument("--relative-to", required=False)
+args = parser.parse_args()
+
+path = os.path.realpath(args.path)
+if args.relative_to:
+    path = os.path.relpath(path, args.relative_to)
+print(path)

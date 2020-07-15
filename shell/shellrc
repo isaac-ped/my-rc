@@ -12,22 +12,32 @@ is_bash() {
     [[ $(basename $SHELL) == "bash" ]]
 }
 
-
 if is_zsh; then
-    export PROMPT='%(?.%{'$PS1_HOSTCOLOR'%}.%{$fg[red]%})'$PS1_HOSTNAME'%{$fg_bold[cyan]%}[%~% ]%(?.%{$fg[green]%}.%{$fg[red]%})%B$ %b'
     HERE=$(dirname $0)
-    ME="$0"
-    if [[ ${SHOW_DIRTY_GIT_PROMPT:-false} ]]; then
-        RPS1='$ZSH_THEME_GIT_PROMPT_PREFIX$(git_current_branch)$ZSH_THEME_GIT_PROMPT_SUFFIX'
-    fi
-fi
-
-if is_bash; then
+elif is_bash; then
     HERE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    ME="${BASH_SOURCE[0]}"
 fi
 
 export PATH="$PATH:$HERE/bin:$(realpath $HERE/../git/bin)"
+if ! which realpath > /dev/null 2> /dev/null; then
+    alias realpath=_realpath;
+fi
+
+if is_zsh; then
+    if [[ ! -e ${HERE}/shellrc-cfg.yml ]]; then
+        cp ${HERE}/shellrc-cfg-default.yml ${HERE}/shellrc-cfg.yml
+    fi
+    eval "$(ymlook --eval $HERE/shellrc-cfg.yml zsh prompt)"
+
+    if [[ ${ps1} != "" ]]; then
+        export PROMPT=${(e)ps1}
+        if [[ ${SHOW_DIRTY_GIT_PROMPT:-1} == 1 ]]; then
+            RPS1='$ZSH_THEME_GIT_PROMPT_PREFIX$(git_current_branch)$ZSH_THEME_GIT_PROMPT_SUFFIX'
+        fi
+    fi
+fi
+
+source "$HERE/better-ssh/shellrc"
 
 acti() {
     if [[ $# == 0 ]]; then
@@ -45,14 +55,6 @@ acti() {
 
 _f0() {
     is_zsh && echo "$funcstack[2]" || echo ${FUNCNAME[1]};
-}
-
-export BETTERSSH_CONFIG=$(realpath ~/.ssh/host-config.yml)
-alias ssh="better-ssh"
-alias sshh="better-ssh -h "
-
-sshl() {
-    sshh ${1}-l
 }
 
 anyconda() {
@@ -127,82 +129,6 @@ pylint-dir() {
     anyconda
     flake-dir $DIRS
     mypy-dir $DIRS
-}
-
-
-host_from_arg() {
-    # Remove before the colon
-    HOST="${1%%:*}"
-    if [[ $HOST != $1 ]]; then # there is a host portion
-        echo "$HOST"
-    else
-        echo $(ssh-config - hostname)
-    fi
-}
-
-copydown() {
-    if [[ $# < 1 ]]; then
-        echo "usage: $(_f0) [-f] [host:]source [dst]"
-    fi
-
-    FORCE=0
-    if [[ $1 == '-f' ]]; then
-        FORCE=1;
-        shift
-    fi
-
-    LOCAL_PREFIX=""
-    if [[ $# > 0 && $1 == "--local" ]]; then
-        LOCAL_PREFIX="local/"
-        shift
-    fi
-
-    # Remove pre-colon for filename
-    FILE="${1#*:}"
-    HOSTKEY=$(host_from_arg $1)
-    if [[ $? != 0 ]]; then
-        return 1
-    fi
-
-    PREFIX=$(ssh-config $HOSTKEY root-dir '~')
-    HOST=$(ssh-config $HOSTKEY hostname $HOSTKEY)
-
-    cur=$(realpath $(pwd) --relative-to ~)
-    SRC=${PREFIX}/$cur/$FILE
-    DST=$FILE
-    if [[ $# > 1 ]]; then
-        DST=$2
-    fi
-    if [[ -e $DST && $FORCE != 1 ]]; then
-        echo "Delete $DST before proceeding"
-        return 1
-    fi
-    scp -r $HOST:$SRC $DST
-}
-
-copyup() {
-    if [[ $# < 1 ]]; then
-        echo "usage: $(_f0) source [[host:]dst]"
-    fi
-
-    HOSTKEY=$(host_from_arg $2)
-    if [[ $? != 0 ]]; then
-        return 1;
-    fi
-    HOST=$(ssh-config $HOSTKEY hostname $HOSTKEY)
-    PREFIX=$(ssh-config $HOSTKEY root-dir '~')
-
-    DST=$(realpath $1 --relative-to ~)
-
-    if [[ $# > 1 ]]; then
-        MAN_DST=${2#*:}
-        if [[ $MAN_DST != "" ]]; then
-            DST=$MAN_DST
-        fi
-    fi
-
-    set -x
-    scp $1 $HOST:$PREFIX/$DST
 }
 
 xfcopy() {

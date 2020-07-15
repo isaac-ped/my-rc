@@ -1,0 +1,40 @@
+#!/bin/bash -x
+
+usage() {
+    echo "usage: $0 [host:]relative/path/to/file [local/path/to/file]" &>2;
+    echo "Copies a file from the current directory on a remote host to the local machine"
+    exit 1
+}
+
+PARAMS=""
+FLAGS=""
+while (( "$#" )); do
+    case "$1" in
+        -*)
+            FLAGS+="$1 "
+            shift;
+            ;;
+        *)
+            PARAMS+="$1 "
+            shift;
+            ;;
+    esac
+done
+set -- $PARAMS
+
+if [[ $# < 1 || $# > 2 ]]; then
+    usage
+fi
+
+HOSTKEY="${1%%:*}"
+FILE="${2#*:}"
+HOST=$(ssh-config "$HOSTKEY}" hostname "$HOSTKEY")
+PREFIX=$(ssh-config "$HOSTKEY}" root-dir '~')
+
+if [[ $# > 1 ]]; then
+    DST="$(dirname $FILE)/$2/$(basename $FILE)"
+else
+    DST="$FILE"
+fi
+
+scp $FLAGS "${HOST}:${FILE}" "$DST"

@@ -1,7 +1,0 @@
-#!/bin/bash
-if ! [[ -z "${DEFAULT_HOST}" ]]; then
-    echo "$DEFAULT_HOST"
-else
-    echo "No DEFAULT_HOST is set" >&2
-    exit 1
-fi

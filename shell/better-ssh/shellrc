@@ -1,0 +1,22 @@
+#!/bin/bash
+
+if [[ "$(basename $SHELL)" == bash ]]; then
+    HERE="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+elif [[ "$(basename $SHELL)" == "zsh" ]]; then
+    HERE="$(dirname $0)"
+fi
+
+export PATH="$PATH:$(realpath $HERE/bin)"
+export BETTERSSH_CONFIG=$(realpath ~/.ssh/host-config.yml)
+alias ssh="better-ssh"
+alias sshh="better-ssh -h"
+
+for SUFFIX in $(ymlook ${BETTERSSH_CONFIG} ._suffixes); do
+    function ssh${SUFFIX}() {
+        # Using both doesn't hurt anything probably... one will be empty?
+        fname="${FUNCNAME[0]}${funcstack[1]}"
+        # Add the suffix to the sshh command
+        set -x
+        sshh ${1}-${fname#ssh}
+    }
+done

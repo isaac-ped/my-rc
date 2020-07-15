@@ -1,7 +1,14 @@
 #!/bin/bash
-# Helper script to install links to this in rc files
+#
+# Helper script to install links to this repo in rc files
+#
+# For bash installation:
+# $ bash install.sh
+#
+# For zsh installation:
+# $ zsh install.sh
 
-THISDIR="$(realpath $(dirname $0))"
+THISDIR="$(realpath "$(dirname $0)")"
 
 TAG="### INSERTED FROM MYRC"
 
@@ -23,9 +30,16 @@ prompt() {
 
 if is_zsh; then
     SHELLRC="$HOME/.zshrc"
+    if [[ ! -e ${THISDIR}/shellrc-cfg.yml ]]; then
+        cp "${THISDIR}/shellrc-cfg-default.yml" "${THISDIR}/shellrc-cfg.yml"
+        echo "Using the following defaults from prompts from ${THISDIR}/shellrc-cfg-default.yml"
+        ymlook --pretty "${THISDIR}/shellrc-cfg.yml zsh prompt"
+        echo "Edit that file to change..."
+    fi
 elif is_bash; then
     SHELLRC="$HOME/.bashrc"
 fi
+
 
 
 get_setting(){
@@ -44,30 +58,15 @@ MY_GIT_SHORTNAME=$(get_setting "git shortname (maybe ${USER:0:4}?)")
 
 echo "Installing git configuration"
 set -x
-git config --global core.excludesFile $(realpath $THISDIR/../git/gitignore_global)
-git config --global include.path $(realpath $THISDIR/../git/gitconfig)
-git config --global user.shortname $MY_GIT_SHORTNAME
+git config --global core.excludesFile "$(realpath $THISDIR/../git/gitignore_global)"
+git config --global include.path "$(realpath $THISDIR/../git/gitconfig)"
+git config --global user.shortname "$MY_GIT_SHORTNAME"
 set +x
-exit 0
 
-if grep "$TAG" $SHELLRC 2>&1 > /dev/null; then
+if grep "$TAG" $SHELLRC > 2>&1 /dev/null; then
     echo "Already appears to be inserted in $SHELLRC"
     echo "Cowardly refusing. Delete '$TAG' from $SHELLRC to continue"
     exit 1
-fi
-
-MY_HOSTNAME=$(get_setting "prompt hostname")
-MY_DEFAULT_HOST=$(get_setting "default host for ssh")
-
-BASE_PROMPTCOLOR=""
-if is_zsh; then
-    source ~/.zshrc
-    while [[ "$BASE_PROMPTCOLOR" == "" || "${fg[$BASE_PROMPTCOLOR]}" == "" ]]; do
-        BASE_PROMPTCOLOR=$(get_setting "base prompt color")
-        if [[ "$BASE_PROMPTCOLOR" == "" || "${fg[$BASE_PROMPTCOLOR]}" == "" ]]; then
-            echo "$BASE_PROMPTCOLOR is not a color. yellow or green maybe?"
-        fi
-    done
 fi
 
 if [[ -e ~/.ssh/host-config.yml ]]; then
@@ -85,17 +84,7 @@ fi
 TO_EXPORT="
 $TAG
 
-PS1_HOSTNAME=\"$MY_HOSTNAME\"
-PS1_HOSTCOLOR='\${fg[$BASE_PROMPTCOLOR]}'
-RCDIR='$THISDIR'
-"
-
-for RC_FILE in $THISDIR/*rc; do
-    TO_EXPORT+="
-source \$RCDIR/$(basename $RC_FILE)"
-done
-
-TO_EXPORT+="
+source $THISDIR/shellrc
 
 ### END INSERT FROM MYRC
 "

@@ -1,0 +1,11 @@
+zsh:
+    prompt:
+        goodcolor: '$fg[green]'
+        badcolor: '$fg[red]'
+        pathcolor: '$fg[cyan]'
+        endcolor: '$fg_bold[green]'
+        hostname: Mrvn
+        ps1: "\
+            %(?.%{${goodcolor}%}.%{${badcolor}%})${hostname}\
+            %{${pathcolor}%}[%~% ]\
+            %(?.%{${endcolor}%}.%{$fg[red]%})%B$ %b"
