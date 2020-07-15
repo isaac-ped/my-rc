@@ -8,7 +8,7 @@
 # For zsh installation:
 # $ zsh install.sh
 
-THISDIR="$(realpath $(dirname $0))"
+THISDIR="$(realpath "$(dirname $0)")"
 
 TAG="### INSERTED FROM MYRC"
 
@@ -31,8 +31,9 @@ prompt() {
 if is_zsh; then
     SHELLRC="$HOME/.zshrc"
     if [[ ! -e ${THISDIR}/shellrc-cfg.yml ]]; then
+        cp "${THISDIR}/shellrc-cfg-default.yml" "${THISDIR}/shellrc-cfg.yml"
         echo "Using the following defaults from prompts from ${THISDIR}/shellrc-cfg-default.yml"
-        ymlook --pretty ${THISDIR}/shellrc-cfg.yml zsh prompt
+        ymlook --pretty "${THISDIR}/shellrc-cfg.yml zsh prompt"
         echo "Edit that file to change..."
     fi
 elif is_bash; then
@@ -57,12 +58,12 @@ MY_GIT_SHORTNAME=$(get_setting "git shortname (maybe ${USER:0:4}?)")
 
 echo "Installing git configuration"
 set -x
-git config --global core.excludesFile $(realpath $THISDIR/../git/gitignore_global)
-git config --global include.path $(realpath $THISDIR/../git/gitconfig)
-git config --global user.shortname $MY_GIT_SHORTNAME
+git config --global core.excludesFile "$(realpath $THISDIR/../git/gitignore_global)"
+git config --global include.path "$(realpath $THISDIR/../git/gitconfig)"
+git config --global user.shortname "$MY_GIT_SHORTNAME"
 set +x
 
-if grep "$TAG" $SHELLRC 2>&1 > /dev/null; then
+if grep "$TAG" $SHELLRC > 2>&1 /dev/null; then
     echo "Already appears to be inserted in $SHELLRC"
     echo "Cowardly refusing. Delete '$TAG' from $SHELLRC to continue"
     exit 1
