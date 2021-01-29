@@ -1,0 +1,127 @@
+#!/bin/bash
+########
+# Start jupyter if necessary, and allow access to specified folder from within
+########
+
+usage() {
+    echo "$0 [notebook-name (sandbox)] [--no-jupyk] [--dev-dir path/to/dir] [--label sandbox-label]"
+}
+
+POSITIONAL=""
+
+DO_JUPYK=1
+DEV_DIR="$(pwd)"
+LABEL=$(basename ${DEV_DIR})
+NOTEBOOK_NAME="sandbox"
+while (( "$#" )); do # While there are arguments left
+    case "$1" in
+        --no-jupyk)
+            DO_JUPYK=0
+            shift
+            ;;
+        --dev-dir)
+            DEV_DIR="$1"
+            shift 2
+            ;;
+        --label)
+            LABEL="$1"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -*|--*)
+            echo "Error: unsupported argument $1" >&2
+            usage >&2;
+            exit 1
+            ;;
+        *)
+            if [[ $POSITIONAL == "" ]]; then
+                $POSITIONAL="$1"
+                shift
+            else
+                echo "Error: takes only one positional argument" >&2
+                usage >&2;
+                exit 1
+            fi
+            ;;
+    esac
+done
+if [[ "$POSITIONAL" != "" ]]; then
+    NOTEBOOK_NAME="$POSITIONAL"
+fi
+
+JUPDIR="$HOME/sandbox/jupyter/$LABEL"
+
+mkdir -p "$JUPDIR"
+
+ADD_PATH_FUNC="
+def add_working_to_path():
+    import sys;
+    sys.path.append('$JUPDIR/working')
+"
+
+HELPER_LIB="$JUPDIR/jupy.py"
+
+if [[ -L $JUPDIR/working ]]; then
+    rm $JUPDIR/working
+    echo "$ADD_PATH_FUNC" > $HELPER_LIB
+fi
+if [[ ! -e $HELPER_LIB ]]; then
+    echo "$ADD_PATH_FUNC" > $HELPER_LIB
+fi
+
+ln -s $DEV_DIR "$JUPDIR/working" 2> /dev/null
+
+JUPYTEXT_ARGS=""
+ENV_LOC="$DEV_DIR/.jupyter-env"
+if [[ "$DO_JUPYK" == 1 && -e $DEV_DIR/tox.ini ]]; then
+    pushd $DEV_DIR
+    echo "Creating ${ENV_LOC}"
+    jupyk --kernel-name "${LABEL}" --devenv ${ENV_LOC}
+    JUPYTEXT_ARGS="--set-kernel $LABEL"
+    popd
+fi
+
+SANDBOX_NOTEBOOK="$JUPDIR/$NOTEBOOK_NAME.ipynb"
+WORKPATH="$JUPDIR"
+if [[ ! -e $SANDBOX_NOTEBOOK ]]; then
+    if type jupytext > /dev/null; then
+        F="$(mktemp).py"
+        echo "import pydoc
+pydoc.apropos('$LABEL'.replace('-','_'))
+# %%
+import sys
+sys.path.append('$JUPYDIR/working')" > $F
+        jupytext --to notebook ${JUPYTEXT_ARGS} -o $SANDBOX_NOTEBOOK $F
+        rm $F
+    fi
+fi
+if [[ -e "$SANDBOX_NOTEBOOK" ]]; then
+    WORKPATH="$SANDBOX_NOTEBOOK"
+fi
+
+WORKPATH_URL=$(realpath --relative-to $HOME/sandbox/jupyter $SANDBOX_NOTEBOOK)
+FULL_URL="http://localhost:1138/lab/workspaces/$LABEL/tree/$WORKPATH_URL"
+
+if lsof -i ':1138' > /dev/null; then
+    echo "Jupyter already started"
+    set -x
+    xdg-open "$FULL_URL" 2> /dev/null > /dev/null
+    set +x
+else
+    echo "Starting jupyter lab..."
+    tmux new-session -d -E bash -c 'conda run -n all jupyter lab --no-browser --no-mathjax --port=1138 --notebook-dir $HOME/sandbox/jupyter'
+    for I in `seq 1 15`; do
+        sleep 1
+        echo "checking..."
+        if lsof -i ':1138'; then
+            echo "Jupyter is up!"
+            xdg-open "$FULL_URL" 2> /dev/null > /dev/null
+            exit 0;
+        fi
+    done
+    echo "Did not work :("
+    exit 1
+fi

@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# Green
+log() { echo "$(tput setaf 2)$@$(tput sgr0)" >&2; }
+# Yellow
+warn() { echo "$(tput setaf 3)WARNING: $@$(tput sgr0)" >&2; }
+# Red
+error() { echo "$(tput setaf 1)ERROR: $@$(tput sgr0)" >&2; }
+
+usage() {
+    echo "$0 [--devenv <.jupyter-env>] [--kernel-name <$(basename $(pwd))>] [--force]"
+}
+
+FORCE=0
+DEVENV=".jupyter-env"
+KERNELNAME="$(basename $(pwd))"
+
+POSITIONAL=""
+
+while (( "$#" )); do # While there are arguments left
+    case "$1" in
+        --force)
+            FORCE=1
+            shift
+            ;;
+        --devenv)
+            DEVENV=$2
+            shift 2
+            ;;
+        --kernel-name)
+            KERNELNAME=$2
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *) # Keep positional
+            error "Unsupported argument $1"
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -d $DEVENV ]]; then
+    log "$DEVENV already exists. Force recreation with --force if necessary"
+elif ! python -m tox --devenv $DEVENV; then
+    warn "Could not create dev environment";
+    exit 1;
+fi
+
+if ! source $DEVENV/bin/activate; then
+    warn "Could not activate jupyter-env";
+    exit 1
+fi
+
+trap deactivate EXIT
+
+if ! python -m pip install ipykernel; then
+    warn "Could not install ipykernel into jupyter-env"
+    exit 1
+fi
+
+DISPLAY_NAME="GT: $KERNELNAME"
+
+python -m ipykernel install --prefix $HOME/.jupyter-data --name ${KERNELNAME} --display-name "${DISPLAY_NAME}"
