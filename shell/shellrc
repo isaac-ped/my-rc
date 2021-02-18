@@ -71,10 +71,12 @@ anyconda() {
     fi
 }
 
-alias jupyter='anyconda && jupyter'
-alias imypy='anyconda && mypy --ignore-missing-imports'
-alias flake8='anyconda && flake8 --max-line-length=88'
-alias python='anyconda && python'
+if [[ "$AUTOCONDA" == 1 ]]; then
+    alias jupyter='unalias jupyter && anyconda && jupyter'
+    alias imypy='unalias imypy && anyconda && mypy --ignore-missing-imports'
+    alias flake8='unalias flake8 && anyconda && flake8 --max-line-length=88'
+    alias python='unalias python && anyconda && python'
+fi
 
 
 finddirs() {
