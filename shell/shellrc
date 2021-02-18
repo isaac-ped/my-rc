@@ -41,16 +41,21 @@ source "$HERE/better-ssh/shellrc"
 
 acti() {
     if [[ $# == 0 ]]; then
-        CHOICES=$(ls */*/activate)
-        ACTI=$(choose_one $CHOICES)
-        if [[ $? != 0 ]]; then
-            echo "No environments found"
-            return -1;
+        if [[ -f "$1/bin/activate" ]]; then
+            source "$1/bin/activate"
         fi
+        BASEDIR="$1"
     else
-        ACTI="$1/bin/activate"
+        BASEDIR="."
     fi
-    source $ACTI
+    select ENVDIR in */*/activate; do
+        if [[ $ENVDIR == "" ]]; then
+            return 1;
+        else
+            break;
+        fi
+    done
+    source "$ENVDIR/bin/activate"
 }
 
 _f0() {
